@@ -3,19 +3,37 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
-  userType: String,
   password: String,
+  userType: {
+    type: String,
+    enum: ['general', 'influencer', 'vendor'],
+    required: true
+  },
+
+  // Common Fields
   country: String,
   state: String,
   gender: String,
   dob: Date,
-  brand: String,
-  followers: Number,
+  isVerified: { type: Boolean, default: false },
+
+  // OTP + Reset
   otp: String,
   otpExpires: Date,
-  isVerified: { type: Boolean, default: false },
-  resetOtp: String,
- resetOtpExpires: Date,
+  resetToken: String,
+  resetTokenExpires: Date,
+
+  // Optional per userType
+  brand: String,
+  followers: Number,
+
+  // Flexible Profile
+  profile: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('users', userSchema);
+module.exports = mongoose.model('User', userSchema);

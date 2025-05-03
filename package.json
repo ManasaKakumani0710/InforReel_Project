@@ -1,5 +1,5 @@
 {
-  "name": "sampale_backend",
+  "name": "inforReel_Backend",
   "version": "1.0.0",
   "description": "This is a sample node js project ",
   "main": "server.js",
@@ -14,10 +14,13 @@
     "bcryptjs": "^3.0.2",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
+    "ejs": "^3.1.10",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.1",
-    "nodemailer": "^6.10.1"
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^6.10.1",
+    "stripe": "^18.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
