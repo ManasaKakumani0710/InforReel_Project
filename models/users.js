@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
   password: String,
+  username:String,
   userType: {
     type: String,
     enum: ['general', 'influencer', 'vendor'],
@@ -16,12 +17,17 @@ const userSchema = new mongoose.Schema({
   gender: String,
   dob: Date,
   isVerified: { type: Boolean, default: false },
+  isProfileSetup: {
+    type: Boolean,
+    default: false
+  },
 
   // OTP + Reset
   otp: String,
   otpExpires: Date,
   resetToken: String,
   resetTokenExpires: Date,
+  stripeAccountId:String,
 
   // Optional per userType
   brand: String,

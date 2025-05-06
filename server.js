@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/dbconfig');
 const userRoutes = require('./routes/userRoutes');
-const insertStaticInterests = require('./scripts/insertInterests');
+// const insertStaticInterests = require('./scripts/insertInterests');
 const identityRoutes = require('./routes/identityRoutes');
 const payments =require('./routes/paymentRoutes');
 const interests=require('./routes/interestsRoutes')
@@ -23,7 +23,7 @@ app.get('/reset-password', (req, res) => {
     res.json({ message: 'Please provide a new password.', token }); 
   });
 
-insertStaticInterests();
+// insertStaticInterests();
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

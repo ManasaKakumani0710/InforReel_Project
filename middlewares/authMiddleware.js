@@ -1,25 +1,32 @@
+// middleware/auth.js
 const jwt = require('jsonwebtoken');
 
-const authMiddleware = (req, res, next) => {
-  // Extract the token from the Authorization header
-  const token = req.header('Authorization')?.replace('Bearer ', ''); // e.g., "Bearer <token>"
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      code: 401,
+      message: 'Unauthorized',
+      error: 'No token provided',
+      result: null
+    });
   }
 
+  const token = authHeader.split(' ')[1];
+
   try {
-    // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // process.env.JWT_SECRET is your secret key
-
-    // Attach the decoded user info to the request object
-    req.user = decoded.user;
-
-    // Proceed to the next middleware/route handler
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Now you can access req.user.id
     next();
   } catch (err) {
-    return res.status(400).json({ message: 'Invalid or expired token.' });
+    return res.status(403).json({
+      code: 403,
+      message: 'Forbidden',
+      error: 'Invalid or expired token',
+      result: null
+    });
   }
 };
 
-module.exports = authMiddleware;
+module.exports = authenticate;
