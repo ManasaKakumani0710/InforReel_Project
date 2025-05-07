@@ -1,8 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 const connectDB = require('./config/dbconfig');
 const userRoutes = require('./routes/userRoutes');
-// const insertStaticInterests = require('./scripts/insertInterests');
 const identityRoutes = require('./routes/identityRoutes');
 const payments =require('./routes/paymentRoutes');
 const interests=require('./routes/interestsRoutes')
@@ -11,7 +11,15 @@ dotenv.config();
 const app = express();
 connectDB();
 
+
+app.use(cors({
+  origin: process.env.CLIENT_URL,  
+}));
+
+
 app.use(express.json());
+
+
 app.use('/api/users', userRoutes);
 app.use('/api/identity', identityRoutes);
 app.use('/api/payments',payments);

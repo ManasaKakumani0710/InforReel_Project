@@ -88,8 +88,8 @@ const registerUser = async (req, res) => {
   delete userObject.otp;
   delete userObject.otpExpires;
 
-    return res.status(201).json({
-      code: 201,
+    return res.status(200).json({
+      code: 200,
       message: 'OTP sent to your email for verification',
       error: null,
       data: userObject
@@ -150,10 +150,17 @@ const loginUser = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    // Clean up user object
+    
+    let userDocs = [];
+    if (user.userType === 'vendor') {
+      userDocs = await vendorDocument.find({ userId: user._id });
+    }
+
+    
     const userObject = user.toObject();
     delete userObject.password;
     userObject.token = token;
+    userObject.documents = userDocs; 
 
     return res.status(200).json({
       code: 200,
@@ -172,6 +179,7 @@ const loginUser = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -254,7 +262,7 @@ const requestPasswordReset = async (req, res) => {
         code: 404,
         message: 'Failed',
         error: 'User not found',
-        result: null
+        data: null
       });
     }
 
@@ -278,7 +286,7 @@ const requestPasswordReset = async (req, res) => {
       code: 200,
       message: 'Password reset link sent to your email',
       error: null,
-      result: null
+      data: null
     });
 
   } catch (err) {
@@ -287,7 +295,7 @@ const requestPasswordReset = async (req, res) => {
       code: 500,
       message: 'Failed to send reset link',
       error: err.message,
-      result: null
+      data: null
     });
   }
 };
@@ -297,32 +305,35 @@ const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
+    // Find the user with the valid reset token and expiry date
     const user = await User.findOne({
       resetToken: token,
-      resetTokenExpires: { $gt: Date.now() }
+      resetTokenExpires: { $gt: Date.now() } // Ensure the token is still valid
     });
 
     if (!user) {
       return res.status(400).json({
         code: 400,
         message: 'Failed',
-        error: 'Invalid or expired token',
-        result: null
+        error: 'Invalid or expired token'
       });
     }
 
+    // Hash the new password before saving it
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+    // Update user's password and clear reset token fields
     user.password = hashedPassword;
     user.resetToken = undefined;
     user.resetTokenExpires = undefined;
     await user.save();
 
+    // Return success response in standardized format
     return res.status(200).json({
       code: 200,
       message: 'Password reset successfully',
       error: null,
-      result: null
+      data: null
     });
 
   } catch (err) {
@@ -331,21 +342,22 @@ const resetPassword = async (req, res) => {
       code: 500,
       message: 'Failed to reset password',
       error: err.message,
-      result: null
+      data: null
     });
   }
 };
 
+
 const updateProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // from JWT
+    const userId = req.user.id;
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         code: 404,
         message: 'Failed',
         error: 'User not found',
-        result: null
+        data: null
       });
     }
 
@@ -354,7 +366,7 @@ const updateProfile = async (req, res) => {
         code: 400,
         message: 'Failed',
         error: 'Missing profile data',
-        result: null
+        data: null
       });
     }
 
@@ -367,11 +379,10 @@ const updateProfile = async (req, res) => {
         code: 400,
         message: 'Failed',
         error: 'Invalid JSON in profile field',
-        result: null
+        data: null
       });
     }
 
-    // Update profile based on user type
     switch (user.userType) {
       case 'general':
         user.profile = {
@@ -398,51 +409,72 @@ const updateProfile = async (req, res) => {
           categories: profileData.categories || [],
           businessType: profileData.businessType || '',
           gstNumber: profileData.gstNumber || '',
-          ssn:profileData.ssn ||'',
+          ssn: profileData.ssn || '',
           address: profileData.address || {},
           socialLinks: profileData.socialLinks || {},
           documentStatus: 'Pending'
         };
 
-        // Save uploaded documents
+        // Process documents
         if (req.files && req.files.length > 0) {
-          const docs = req.files.map(file => ({
-            userId,
-            fileName: file.originalname,
-            filePath: file.path,
-            mimeType: file.mimetype,
-            fileType: req.body.fileType || 'Other'
-          }));
-          await vendorDocument.insertMany(docs);
-        }
+          let fileMeta = [];
 
-        // Notify admin via email
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: process.env.COMPANY_VERIFICATION_EMAIL,
-          subject: 'Vendor Profile Updated - Verification Required',
-          text: `Vendor ${user.name} (${user.email}) has updated their profile. Please review their documents.`
-        });
+          try {
+            fileMeta = req.body.fileMeta ? JSON.parse(req.body.fileMeta) : [];
+          } catch (error) {
+            return res.status(400).json({
+              code: 400,
+              message: 'Failed',
+              error: 'Invalid JSON in fileMeta field',
+              data: null
+            });
+          }
+
+          const docs = req.files.map(file => {
+            const meta = fileMeta.find(m => m.fileName === file.originalname) || {};
+            return {
+              userId,
+              fileName: file.originalname,
+              filePath: file.path,
+              mimeType: file.mimetype,
+              fileType: meta.fileType || 'Other',
+              fileCategory: meta.category || 'Other'
+            };
+          });
+
+          await vendorDocument.insertMany(docs);
+
+          // Send admin email with uploaded files
+          const attachments = req.files.map(file => ({
+            filename: file.originalname,
+            path: file.path
+          }));
+
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: process.env.COMPANY_VERIFICATION_EMAIL,
+            subject: 'Vendor Profile Updated - Verification Required',
+            text: `Vendor ${user.name} (${user.email}) has updated their profile. Please review their documents.`,
+            attachments
+          });
+        }
 
         break;
 
-        default:
+      default:
         return res.status(400).json({
           code: 400,
           message: 'Failed',
           error: 'Unsupported user type',
-          result: null
+          data: null
         });
-        
     }
-    user.isProfileSetup = true;
 
+    user.isProfileSetup = true;
     await user.save();
 
-    // Fetch documents for user
     const userDocs = await vendorDocument.find({ userId });
 
-    // Clean user object
     const userObject = user.toObject();
     delete userObject.password;
     delete userObject.otp;
@@ -452,7 +484,7 @@ const updateProfile = async (req, res) => {
       code: 200,
       message: 'Profile updated successfully',
       error: null,
-      result: {
+      data: {
         user: userObject,
         documents: userDocs
       }
@@ -464,7 +496,7 @@ const updateProfile = async (req, res) => {
       code: 500,
       message: 'Failed to update profile',
       error: err.message,
-      result: null
+      data: null
     });
   }
 };
@@ -482,7 +514,7 @@ const resendOtp = async (req, res) => {
         code: 404,
         message: 'Failed',
         error: 'User not found',
-        result: null
+        data: null
       });
     }
 
@@ -491,7 +523,7 @@ const resendOtp = async (req, res) => {
         code: 400,
         message: 'Failed',
         error: 'User already verified',
-        result: null
+        data: null
       });
     }
 
@@ -513,7 +545,7 @@ const resendOtp = async (req, res) => {
       code: 200,
       message: 'OTP resent successfully',
       error: null,
-      result: null
+      data: null
     });
 
   } catch (err) {
@@ -522,7 +554,7 @@ const resendOtp = async (req, res) => {
       code: 500,
       message: 'Failed to resend OTP',
       error: err.message,
-      result: null
+      data: null
     });
   }
 };

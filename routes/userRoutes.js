@@ -23,7 +23,7 @@ router.post('/reset-password', resetPassword);
 router.post(
   '/profile',
   authMiddleware,
-  upload.array('documents', 10), 
+  upload.array('files'), 
   updateProfile
 );
 

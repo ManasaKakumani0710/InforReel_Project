@@ -9,7 +9,7 @@ const authenticate = (req, res, next) => {
       code: 401,
       message: 'Unauthorized',
       error: 'No token provided',
-      result: null
+      data: null
     });
   }
 
@@ -24,7 +24,7 @@ const authenticate = (req, res, next) => {
       code: 403,
       message: 'Forbidden',
       error: 'Invalid or expired token',
-      result: null
+      data: null
     });
   }
 };

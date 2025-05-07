@@ -26,6 +26,7 @@ const createVerificationSession = async (req, res) => {
       });
     }
 
+    
     const session = await stripe.identity.verificationSessions.create({
       type: 'document',
       metadata: {
@@ -40,13 +41,21 @@ const createVerificationSession = async (req, res) => {
       return_url: process.env.STRIPE_RETURN_URL
     });
 
+    // 2. Create Ephemeral Key (Important: specify API version)
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { verification_session: session.id },
+      { apiVersion: '2025-04-30.basil' }  
+    );
+
+
     return res.status(200).json({
       code: 200,
-      message: 'Stripe verification session created',
+      message: 'Stripe verification session and ephemeral key created',
       error: null,
       data: {
         sessionId: session.id,
         clientSecret: session.client_secret,
+        ephemeralKey: ephemeralKey.secret,
         redirectUrl: session.url
       }
     });

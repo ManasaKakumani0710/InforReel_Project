@@ -9,7 +9,7 @@ const vendorDocumentSchema = new mongoose.Schema({
   fileName: String,
   filePath: String,
   mimeType: String,
-  fileType: String, // e.g., 'GST Certificate', 'Brand Logo', 'Business Proof'
+  fileType: String, 
   uploadedAt: { type: Date, default: Date.now }
 });
 
