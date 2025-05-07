@@ -385,20 +385,35 @@ const updateProfile = async (req, res) => {
 
     switch (user.userType) {
       case 'general':
+        user.country = req.body.country || user.country;
+        user.state = req.body.state || user.state;
+        user.gender = req.body.gender || user.gender;
+        user.dob = req.body.dob || user.dob;
         user.profile = {
-          bio: profileData.bio || '',
-          preferences: profileData.preferences || []
+          interests: profileData.interests || [], // interests from the 4 box grid
         };
         break;
-
+      
       case 'influencer':
+        user.country = req.body.country || user.country;
+        user.state = req.body.state || user.state;
+        user.gender = req.body.gender || user.gender;
+        user.dob = req.body.dob || user.dob;
         user.profile = {
-          bio: profileData.bio || '',
           niche: profileData.niche || [],
           about: profileData.about || '',
-          brandStatement: profileData.brandStatement || ''
+          brandStatement: profileData.brandStatement || '',
+          workedWithBrands: profileData.workedWithBrands || [],
+          socialLinks: profileData.socialLinks || {
+            Instagram: '',
+            Facebook: '',
+            TikTok: '',
+            YouTube: '',
+            Other: ''
+          }
         };
         break;
+      
 
       case 'vendor':
         user.profile = {
@@ -411,7 +426,13 @@ const updateProfile = async (req, res) => {
           gstNumber: profileData.gstNumber || '',
           ssn: profileData.ssn || '',
           address: profileData.address || {},
-          socialLinks: profileData.socialLinks || {},
+          socialLinks: profileData.socialLinks || {
+            Instagram: '',
+            Facebook: '',
+            TikTok: '',
+            YouTube: '',
+            Other: ''
+          },
           documentStatus: 'Pending'
         };
 

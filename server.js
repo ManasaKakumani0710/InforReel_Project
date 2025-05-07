@@ -12,9 +12,7 @@ const app = express();
 connectDB();
 
 
-app.use(cors({
-  origin: process.env.CLIENT_URL,  
-}));
+app.use(cors());
 
 
 app.use(express.json());
