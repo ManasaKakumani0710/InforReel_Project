@@ -385,21 +385,21 @@ const updateProfile = async (req, res) => {
 
     switch (user.userType) {
       case 'general':
-        user.country = req.body.country || user.country;
-        user.state = req.body.state || user.state;
-        user.gender = req.body.gender || user.gender;
-        user.dob = req.body.dob || user.dob;
         user.profile = {
-          interests: profileData.interests || [], // interests from the 4 box grid
+          country: profileData.country || '',
+          state: profileData.state || '',
+          gender: profileData.gender || '',
+          dob: profileData.dob || '',
+          interests: profileData.interests || []
         };
         break;
-      
+
       case 'influencer':
-        user.country = req.body.country || user.country;
-        user.state = req.body.state || user.state;
-        user.gender = req.body.gender || user.gender;
-        user.dob = req.body.dob || user.dob;
         user.profile = {
+          country: profileData.country || '',
+          state: profileData.state || '',
+          gender: profileData.gender || '',
+          dob: profileData.dob || '',
           niche: profileData.niche || [],
           about: profileData.about || '',
           brandStatement: profileData.brandStatement || '',
@@ -413,10 +413,13 @@ const updateProfile = async (req, res) => {
           }
         };
         break;
-      
 
       case 'vendor':
         user.profile = {
+          country: profileData.country || '',
+          state: profileData.state || '',
+          gender: profileData.gender || '',
+          dob: profileData.dob || '',
           brandName: profileData.brandName || '',
           website: profileData.website || '',
           description: profileData.description || '',
@@ -426,6 +429,15 @@ const updateProfile = async (req, res) => {
           gstNumber: profileData.gstNumber || '',
           ssn: profileData.ssn || '',
           address: profileData.address || {},
+          dbaTradeName: profileData.dbaTradeName || '',
+          brandCountry: profileData.brandCountry || '',
+          brandLaunchYear: profileData.brandLaunchYear || '',
+          isRegisteredBusiness: profileData.isRegisteredBusiness || false,
+          isManufacturer: profileData.isManufacturer || false,
+          productSoldInUS: profileData.productSoldInUS || false,
+          productCountries: profileData.productCountries || [],
+          productDescription: profileData.productDescription || '',
+          productPriceRange: profileData.productPriceRange || '',
           socialLinks: profileData.socialLinks || {
             Instagram: '',
             Facebook: '',
@@ -436,10 +448,8 @@ const updateProfile = async (req, res) => {
           documentStatus: 'Pending'
         };
 
-        // Process documents
         if (req.files && req.files.length > 0) {
           let fileMeta = [];
-
           try {
             fileMeta = req.body.fileMeta ? JSON.parse(req.body.fileMeta) : [];
           } catch (error) {
@@ -465,7 +475,6 @@ const updateProfile = async (req, res) => {
 
           await vendorDocument.insertMany(docs);
 
-          // Send admin email with uploaded files
           const attachments = req.files.map(file => ({
             filename: file.originalname,
             path: file.path
@@ -479,7 +488,6 @@ const updateProfile = async (req, res) => {
             attachments
           });
         }
-
         break;
 
       default:
@@ -521,6 +529,7 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -581,6 +590,38 @@ const resendOtp = async (req, res) => {
 };
 
 
+const deleteUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        code: 404,
+        message: 'Failed',
+        error: 'User not found',
+        data: null
+      });
+    }
+
+    return res.status(200).json({
+      code: 200,
+      message: 'User deleted successfully',
+      error: null,
+      data: deletedUser
+    });
+  } catch (err) {
+    console.error('Delete User Error:', err);
+    return res.status(500).json({
+      code: 500,
+      message: 'Failed to delete user',
+      error: err.message,
+      data: null
+    });
+  }
+};
+
 
 
 
@@ -591,5 +632,6 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateProfile,
-  resendOtp
+  resendOtp,
+  deleteUserById
 };

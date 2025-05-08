@@ -8,11 +8,8 @@ const {
     resetPassword,
     requestPasswordReset,
     updateProfile,
-    resendOtp  } = require('../controllers/userController');
+    resendOtp ,deleteUserById } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
-
-
-
 
 
 router.post('/register', registerUser);
@@ -29,6 +26,7 @@ router.post(
 
 router.post('/resend-otp', resendOtp);
 
+router.delete('/users/:userId', deleteUserById);
 
 router.get('/profile', authMiddleware, (req, res) => {
     res.json({ message: 'This is a protected profile route', user: req.user });
