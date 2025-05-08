@@ -416,7 +416,7 @@ const updateProfile = async (req, res) => {
 
       case 'vendor':
         user.profile = {
-          address: JSON.stringify(profileData.address) || '',
+          address: profileData.address || '',
           gender: profileData.gender || '',
           dob: profileData.dob || '',
           brandName: profileData.brandName || '',
