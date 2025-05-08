@@ -416,7 +416,6 @@ const updateProfile = async (req, res) => {
 
       case 'vendor':
         user.profile = {
-          address: profileData.address || '',
           gender: profileData.gender || '',
           dob: profileData.dob || '',
           brandName: profileData.brandName || '',
