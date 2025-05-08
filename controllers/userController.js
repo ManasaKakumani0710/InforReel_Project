@@ -433,6 +433,7 @@ const updateProfile = async (req, res) => {
           isRegisteredBusiness: profileData.isRegisteredBusiness || false,
           isManufacturer: profileData.isManufacturer || false,
           productSoldInUS: profileData.productSoldInUS || false,
+          businessAddress:profileData.businessAddress||'',
           productCountries: profileData.productCountries || [],
           productDescription: profileData.productDescription || '',
           productPriceRange: profileData.productPriceRange || '',
