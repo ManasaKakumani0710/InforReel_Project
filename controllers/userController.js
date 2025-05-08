@@ -416,27 +416,56 @@ const updateProfile = async (req, res) => {
 
       case 'vendor':
         user.profile = {
-          gender: profileData.gender || '',
+          fullName: profileData.fullName || '',
           dob: profileData.dob || '',
-          brandName: profileData.brandName || '',
-          website: profileData.website || '',
-          description: profileData.description || '',
-          industry: profileData.industry || '',
-          categories: profileData.categories || [],
-          businessType: profileData.businessType || '',
-          gstNumber: profileData.gstNumber || '',
+          gender: profileData.gender || '',
           ssn: profileData.ssn || '',
-          address: profileData.address || {},
-          dbaTradeName: profileData.dbaTradeName || '',
+          
+          address: {
+            addressLine1: profileData.address?.addressLine1 || '',
+            addressLine2: profileData.address?.addressLine2 || '',
+            city: profileData.address?.city || '',
+            state: profileData.address?.state || '',
+            country: profileData.address?.country || '',
+            zipCode: profileData.address?.zipCode || ''
+          },
+        
+          // Identity Verification
+          identification: {
+            status: profileData.identification?.status || 'Pending',
+            stripeSessionId: profileData.identification?.stripeSessionId || ''
+          },
+        
+          // Business Info
+          categories: profileData.categories || [],
+          businessName: profileData.businessName || '',
+          hasDba: profileData.hasDba || false,                
+          dbaTradeName: profileData.dbaTradeName || '',       
+        
+          businessContact: profileData.businessContact || {
+            email: '',
+            phone: ''
+          },
+        
+          businessAddress: {
+            sameAsResidential: false,
+            addressLine1: profileData.businessAddress?.addressLine1 || '',
+            addressLine2: profileData.businessAddress?.addressLine2 || '',
+            city: profileData.businessAddress?.city || '',
+            state: profileData.businessAddress?.state || '',
+            country: profileData.businessAddress?.country || '',
+            zipCode: profileData.businessAddress?.zipCode || ''
+          },
+        
+          businessWebsite: profileData.businessWebsite || '',
+          businessType: profileData.businessType || '',
+          isRegisteredBusiness: profileData.isRegisteredBusiness || false,
+          einNumber: profileData.einNumber || '',
+          isManufacturer: profileData.isManufacturer || false,
           brandCountry: profileData.brandCountry || '',
           brandLaunchYear: profileData.brandLaunchYear || '',
-          isRegisteredBusiness: profileData.isRegisteredBusiness || false,
-          isManufacturer: profileData.isManufacturer || false,
-          productSoldInUS: profileData.productSoldInUS || false,
-          businessAddress:profileData.businessAddress||'',
-          productCountries: profileData.productCountries || [],
-          productDescription: profileData.productDescription || '',
-          productPriceRange: profileData.productPriceRange || '',
+        
+          // Social Media
           socialLinks: profileData.socialLinks || {
             Instagram: '',
             Facebook: '',
@@ -444,8 +473,19 @@ const updateProfile = async (req, res) => {
             YouTube: '',
             Other: ''
           },
-          documentStatus: 'Pending'
+        
+          // Product Info
+          productSoldInUS: profileData.productSoldInUS || false,
+          productCountries: profileData.productCountries || [],
+          brandPromotionalPlan : profileData.brandPromotionalPlan  || '',
+          productDescription: profileData.productDescription || '',
+          productUSP: profileData.productUSP || '',
+        
+          // Internal Tracking
+          documentStatus: profileData.documentStatus || 'Pending',
+          createdAt: new Date().toISOString()
         };
+        
 
         if (req.files && req.files.length > 0) {
           let fileMeta = [];
