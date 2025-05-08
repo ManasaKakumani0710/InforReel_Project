@@ -475,7 +475,7 @@ const updateProfile = async (req, res) => {
           },
         
           // Product Info
-          productSoldInUS: profileData.productSoldInUS || false,
+          isAllowedEveryWhere: profileData.isAllowedEveryWhere || false,
           productCountries: profileData.productCountries || [],
           brandPromotionalPlan : profileData.brandPromotionalPlan  || '',
           productDescription: profileData.productDescription || '',
