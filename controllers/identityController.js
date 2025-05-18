@@ -26,7 +26,7 @@ const createVerificationSession = async (req, res) => {
         ssn_last_4: ssn,
         address: JSON.stringify(address),
       },
-      return_url: process.env.STRIPE_RETURN_URL,
+      return_url: process.env.FRONTEND_FAILURE_URL,
     });
 
     // 2. Create Ephemeral Key (Important: specify API version)

@@ -30,7 +30,7 @@ router.get("/api/identity-complete", async (req, res) => {
     } else {
       // Not verified — redirect to frontend failure page
       return res.redirect(
-        `${process.env.FRONTEND_FAILURE_URL}?status=failed&message=Verification ${session.status}`
+        `${process.env.FRONTEND_FAILURE_URL}?status=failed&message=Not verified your profile.Please Verify ${session.status}`
       );
     }
   } catch (err) {

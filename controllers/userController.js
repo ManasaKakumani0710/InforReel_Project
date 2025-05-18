@@ -569,15 +569,6 @@ const resendOtp = async (req, res) => {
       });
     }
 
-    if (user.isVerified) {
-      return res.status(400).json({
-        code: 400,
-        message: "Failed",
-        error: "User already verified",
-        data: null,
-      });
-    }
-
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otp, 10);
 
