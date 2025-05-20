@@ -1,32 +1,37 @@
-// middleware/auth.js
 const jwt = require('jsonwebtoken');
+const User = require('../models/users');
 
-const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+module.exports = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
     return res.status(401).json({
       code: 401,
-      message: 'Unauthorized',
-      error: 'No token provided',
+      message: 'Failed',
+      error: 'Unauthorized',
       data: null
     });
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Now you can access req.user.id
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({
+        code: 404,
+        message: 'Failed',
+        error: 'User not found',
+        data: null
+      });
+    }
+
+    req.user = user; 
     next();
   } catch (err) {
-    return res.status(403).json({
-      code: 403,
-      message: 'Forbidden',
-      error: 'Invalid or expired token',
+    return res.status(401).json({
+      code: 401,
+      message: 'Failed',
+      error: 'Invalid Token',
       data: null
     });
   }
 };
-
-module.exports = authenticate;
