@@ -5,10 +5,11 @@ const postSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   video: { type: String, required: true },
-  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }] ,
+  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] ,
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }]
+  comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
+  hiddenFrom: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Post', postSchema);

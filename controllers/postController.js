@@ -15,12 +15,42 @@ const createPost = async (req, res) => {
       });
     }
 
+    const user = await User.findById(req.user._id).select("name email");
+
+    if (!user) {
+      return res.status(404).json({
+        code: 404,
+        message: "Failed",
+        error: "User not found.",
+        data: null
+      });
+    }
+
+    // Parse and resolve company names to users
+    let taggedUsers = [];
+    let taggedUserDetails = [];
+
+    if (tags) {
+      const companyNames = JSON.parse(tags); // assuming tags is a JSON stringified array
+
+      const users = await User.find({
+        "profile.businessName": { $in: companyNames }
+      }).select("_id name email profile.businessName");
+
+      taggedUsers = users.map(u => u._id);
+      taggedUserDetails = users.map(u => ({
+        userId: u._id,
+        username: u.name,
+        email: u.email,
+        companyName: u.profile.businessName
+      }));
+    }
 
     const post = await Post.create({
       user: req.user._id,
       title,
       description,
-      tags: tags ? JSON.parse(tags) : [],
+      tags: taggedUsers,
       video
     });
 
@@ -30,10 +60,14 @@ const createPost = async (req, res) => {
       error: null,
       data: {
         _id: post._id,
-        user: req.user._id,
+        user: {
+          userId: req.user._id,
+          username: user.name,
+          email: user.email
+        },
         title: post.title,
         description: post.description,
-        tags: post.tags,
+        tags: taggedUserDetails,
         video: post.video,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt
@@ -49,11 +83,16 @@ const createPost = async (req, res) => {
   }
 };
 
+
+
+
 const getAllPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
-      .populate('user', 'name email')
-      .populate('taggedUsers', 'email')
+    const userId = req.user._id;
+
+    const posts = await Post.find({ hiddenFrom: { $ne: userId } })
+      .populate('user', 'name email profile.businessName')
+      .populate('tags', 'name email') 
       .populate('likes', 'email')
       .populate('savedBy', 'email')
       .populate({
@@ -64,14 +103,23 @@ const getAllPosts = async (req, res) => {
 
     const formattedPosts = posts.map(post => ({
       _id: post._id,
-      user: post.user,
+      user: {
+        _id: post.user._id,
+        name: post.user.name,
+        email: post.user.email,
+        businessName: post.user.profile?.businessName || null
+      },
       content: post.content,
       media: post.media,
-      taggedUsers: post.taggedUsers.map(u => u.email),
-      likes: post.likes.map(u => u.email),
-      likesCount: post.likes.length,                
-      savedBy: post.savedBy.map(u => u.email),
-      comments: post.comments,
+      taggedUsers: post.tags?.map(u => ({
+        userId: u._id,
+        username: u.name,
+        email: u.email
+      })) || [],
+      likes: post.likes?.map(u => u.email) || [],
+      likesCount: post.likes?.length || 0,
+      savedBy: post.savedBy?.map(u => u.email) || [],
+      comments: post.comments || [],
       createdAt: post.createdAt,
       updatedAt: post.updatedAt
     }));
@@ -91,6 +139,9 @@ const getAllPosts = async (req, res) => {
     });
   }
 };
+
+
+
 
 const toggleLike = async (req, res) => {
   try {
@@ -174,9 +225,82 @@ const toggleSave = async (req, res) => {
   }
 };
 
+
+const getVendorCompanies = async (req, res) => {
+  try {
+    const vendors = await User.find({ userType: "vendor", isProfileSetup:true }).select("_id username profile.businessName");
+
+    const formatted = vendors.map(vendor => ({
+      userId: vendor._id,
+      username: vendor.username,
+      companyName: vendor.profile?.businessName || null
+    }));
+
+    res.status(200).json({
+      code: 200,
+      message: "Success",
+      error: null,
+      data: formatted
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: 500,
+      message: "Failed",
+      error: err.message,
+      data: null
+    });
+  }
+};
+
+
+const reportPost = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const postId = req.params.postId;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        code: 404,
+        message: "Post not found",
+        error: null,
+        data: null
+      });
+    }
+
+    // Add user to hiddenFrom if not already
+    if (!post.hiddenFrom.includes(userId)) {
+      post.hiddenFrom.push(userId);
+      await post.save();
+    }
+
+    res.status(200).json({
+      code: 200,
+      message: "Post reported and hidden from user",
+      error: null,
+      data: {
+        postId: post._id,
+        hiddenFrom: post.hiddenFrom
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: 500,
+      message: "Failed",
+      error: err.message,
+      data: null
+    });
+  }
+};
+
+
+
+
 module.exports = {
   createPost,
   getAllPosts,
   toggleLike,
-  toggleSave
+  toggleSave,
+  getVendorCompanies,
+  reportPost
 };
