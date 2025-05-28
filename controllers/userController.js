@@ -600,11 +600,11 @@ const resendOtp = async (req, res) => {
   }
 };
 
-const deleteUserById = async (req, res) => {
+const deleteUserByEmail = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { email } = req.params;
 
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const deletedUser = await User.findOneAndDelete({ email });
 
     if (!deletedUser) {
       return res.status(404).json({
@@ -640,5 +640,5 @@ module.exports = {
   requestPasswordReset,
   updateProfile,
   resendOtp,
-  deleteUserById,
+  deleteUserByEmail,
 };

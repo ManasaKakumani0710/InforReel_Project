@@ -13,6 +13,7 @@ const interestsRoutes = require("./routes/interestsRoutes");
 const postRoutes = require("./routes/postRoutes");
 const productRoutes = require('./routes/productRoutes');
 
+
 dotenv.config();
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);

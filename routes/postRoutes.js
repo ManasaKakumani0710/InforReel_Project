@@ -13,5 +13,6 @@ router.post('/comment/:id', auth, commentController.addComment);
 router.get('/comments/:id', commentController.getCommentsByPost);
 router.get('/vendorDetails',postController.getVendorCompanies);
 router.get('/report/:postId',auth,postController.reportPost);
+router.post('/report-channel',auth, postController.reportCompany);
 
 module.exports = router;

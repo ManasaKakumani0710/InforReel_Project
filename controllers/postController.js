@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const User = require('../models/users');
+const ReportedCompany = require('../models/ReportedCompany');
 
 const createPost = async (req, res) => {
   try {
@@ -26,12 +27,11 @@ const createPost = async (req, res) => {
       });
     }
 
-    // Parse and resolve company names to users
     let taggedUsers = [];
     let taggedUserDetails = [];
 
     if (tags) {
-      const companyNames = JSON.parse(tags); // assuming tags is a JSON stringified array
+      const companyNames = JSON.parse(tags);
 
       const users = await User.find({
         "profile.businessName": { $in: companyNames }
@@ -86,13 +86,27 @@ const createPost = async (req, res) => {
 
 
 
+
 const getAllPosts = async (req, res) => {
   try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        code: 401,
+        message: 'Unauthorized',
+        error: 'User authentication failed. Token may be missing or invalid.',
+        data: null
+      });
+    }
+
     const userId = req.user._id;
 
-    const posts = await Post.find({ hiddenFrom: { $ne: userId } })
-      .populate('user', 'name email profile.businessName')
-      .populate('tags', 'name email') 
+    const reportedCompanies = await ReportedCompany.find().distinct('companyName');
+
+    const posts = await Post.find({
+      hiddenFrom: { $ne: userId }
+    })
+      .populate('user', 'name email')
+      .populate('tags', 'name email profile.businessName')
       .populate('likes', 'email')
       .populate('savedBy', 'email')
       .populate({
@@ -101,20 +115,33 @@ const getAllPosts = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    const formattedPosts = posts.map(post => ({
+    const filteredPosts = posts.filter(post => {
+      if (!post.user) return false; 
+      if (!post.tags || !Array.isArray(post.tags)) return true;
+
+    
+      const isTaggedCompanyReported = post.tags.some(tag =>
+        reportedCompanies.includes(tag.profile?.businessName)
+      );
+
+      return !isTaggedCompanyReported;
+    });
+
+    
+    const formattedPosts = filteredPosts.map(post => ({
       _id: post._id,
       user: {
-        _id: post.user._id,
-        name: post.user.name,
-        email: post.user.email,
-        businessName: post.user.profile?.businessName || null
+        _id: post.user?._id,
+        name: post.user?.name,
+        email: post.user?.email
       },
       content: post.content,
       media: post.media,
       taggedUsers: post.tags?.map(u => ({
         userId: u._id,
         username: u.name,
-        email: u.email
+        email: u.email,
+        businessName: u.profile?.businessName || ''
       })) || [],
       likes: post.likes?.map(u => u.email) || [],
       likesCount: post.likes?.length || 0,
@@ -133,7 +160,7 @@ const getAllPosts = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       code: 500,
-      message: 'Failed',
+      message: 'Failed to fetch posts',
       error: err.message,
       data: null
     });
@@ -256,7 +283,19 @@ const getVendorCompanies = async (req, res) => {
 const reportPost = async (req, res) => {
   try {
     const userId = req.user._id;
+    const username = req.user.username;
+    const userEmail = req.user.email;
     const postId = req.params.postId;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string') {
+      return res.status(400).json({
+        code: 400,
+        message: 'Bad Request',
+        error: 'Reason for reporting is required.',
+        data: null
+      });
+    }
 
     const post = await Post.findById(postId);
     if (!post) {
@@ -268,11 +307,22 @@ const reportPost = async (req, res) => {
       });
     }
 
-    // Add user to hiddenFrom if not already
+   
     if (!post.hiddenFrom.includes(userId)) {
       post.hiddenFrom.push(userId);
-      await post.save();
     }
+
+    
+    post.reports = post.reports || [];
+    post.reports.push({
+      user: userId,
+      username,
+      email: userEmail,
+      reason,
+      reportedAt: new Date()
+    });
+
+    await post.save();
 
     res.status(200).json({
       code: 200,
@@ -280,7 +330,13 @@ const reportPost = async (req, res) => {
       error: null,
       data: {
         postId: post._id,
-        hiddenFrom: post.hiddenFrom
+        hiddenFrom: post.hiddenFrom,
+        lastReport: {
+          userId,
+          username,
+          email: userEmail,
+          reason
+        }
       }
     });
   } catch (err) {
@@ -296,11 +352,59 @@ const reportPost = async (req, res) => {
 
 
 
+
+const reportCompany = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const email = req.user?.email;
+    const username = req.user?.name;
+
+    const { companyName, companyUserId } = req.body;
+
+    if (!userId || !email || !username || !companyName || !companyUserId) {
+      return res.status(400).json({
+        code: 400,
+        message: 'Missing required fields',
+        error: 'companyName, companyUserId, and authenticated user info are required',
+        data: null
+      });
+    }
+
+    const report = await ReportedCompany.create({
+      companyName,
+      companyUserId,
+      reportedBy: {
+        userId,
+        email,
+        username
+      }
+    });
+
+    return res.status(200).json({
+      code: 200,
+      message: 'Company reported successfully',
+      error: null,
+      data: report
+    });
+  } catch (err) {
+    return res.status(500).json({
+      code: 500,
+      message: 'Failed to report company',
+      error: err.message,
+      data: null
+    });
+  }
+};
+
+
+
+
 module.exports = {
   createPost,
   getAllPosts,
   toggleLike,
   toggleSave,
   getVendorCompanies,
-  reportPost
+  reportPost,
+  reportCompany
 };
