@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
+const Session = require('../models/Session');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const transporter = nodemailer.createTransport({
@@ -113,43 +114,23 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, username, password } = req.body;
+    const clientType = req.headers['x-client-type'] || 'web';
 
-    // Must provide either email or username
     if (!email && !username) {
-      return res.status(400).json({
-        code: 400,
-        message: "Failed",
-        error: "Email or username is required",
-        data: null,
-      });
+      return res.status(400).json({ code: 400, message: "Failed", error: "Email or username is required", data: null });
     }
 
     const user = await User.findOne(email ? { email } : { username });
-
-    if (!user) {
-      return res.status(400).json({
-        code: 400,
-        message: "Failed",
-        error: "Invalid email/username or password",
-        data: null,
-      });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ code: 400, message: "Failed", error: "Invalid email/username or password", data: null });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({
-        code: 400,
-        message: "Failed",
-        error: "Invalid email/username or password",
-        data: null,
-      });
-    }
+    const expiresIn = clientType === 'mobile' ? '10y' : '1h';
+    const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn });
+    const decoded = jwt.decode(token);
+    const expiry = new Date(decoded.exp * 1000);
 
-    const token = jwt.sign(
-      { id: user._id, userType: user.userType },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    await Session.create({ userId: user._id, token, deviceType: clientType, expiresAt: expiry });
 
     let userDocs = [];
     if (user.userType === "vendor") {
@@ -169,18 +150,34 @@ const loginUser = async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    return res.status(500).json({
-      code: 500,
-      message: "Login failed",
-      error: err.message,
-      data: null,
+    return res.status(500).json({ code: 500, message: "Login failed", error: err.message, data: null });
+  }
+};
+
+const logoutUser = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(400).json({ code: 400, message: 'No token provided', data: null });
+    }
+
+    await Session.findOneAndDelete({ token });
+
+    return res.status(200).json({
+      code: 200,
+      message: 'Logout successful',
+      data: null
     });
+  } catch (err) {
+    return res.status(500).json({ code: 500, message: 'Logout failed', error: err.message, data: null });
   }
 };
 
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
+    const clientType = req.headers['x-client-type'] || 'web';
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -211,20 +208,26 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Mark as verified & clear OTP fields
+    // Mark user as verified
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
 
-    // Generate JWT Token
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET, // store in .env as JWT_SECRET
-      { expiresIn: "1h" }
-    );
+    // Issue token
+    const expiresIn = clientType === 'mobile' ? '10y' : '1h';
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn });
+    const decoded = jwt.decode(token);
+    const expiry = new Date(decoded.exp * 1000);
 
-    // Prepare user response object
+    // Save session
+    await Session.create({
+      userId: user._id,
+      token,
+      deviceType: clientType,
+      expiresAt: expiry,
+    });
+
     const userObject = user.toObject();
     delete userObject.password;
     userObject.token = token;
@@ -641,4 +644,5 @@ module.exports = {
   updateProfile,
   resendOtp,
   deleteUserByEmail,
+  logoutUser,
 };

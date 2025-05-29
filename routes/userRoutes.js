@@ -8,7 +8,8 @@ const {
     resetPassword,
     requestPasswordReset,
     updateProfile,
-    resendOtp ,deleteUserByEmail } = require('../controllers/userController');
+    resendOtp ,deleteUserByEmail,
+  logoutUser } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 
@@ -36,6 +37,7 @@ router.get('/profile', authMiddleware, (req, res) => {
     const { token } = req.query;
     res.render('reset-password', { token });
   });
+  router.post('/logout', authMiddleware, logoutUser);
 
   
 
