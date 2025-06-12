@@ -270,8 +270,18 @@ const completeOrderHandler = async (req, res) => {
   const { orderData, tracking } = req.body;
 
   try {
+    // Generate custom order ID
     const orderId = "ORD" + new Date().getTime();
     const trackingUrl = `https://track.shippo.com/#/${tracking.carrier}/${tracking.tracking_number}`;
+
+    // Create and save the order
+    const newOrder = new Order({
+      ...orderData,
+      tracking,
+      createdAt: new Date()
+    });
+
+    await newOrder.save();
 
     res.status(200).json({
       code: 200,
@@ -283,9 +293,15 @@ const completeOrderHandler = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ code: 500, message: "Failed to complete order", data: null });
+    console.error("Order insert error:", error);
+    res.status(500).json({
+      code: 500,
+      message: "Failed to complete order",
+      data: null
+    });
   }
 };
+
 
 
 const shippingHandler = async (req, res) => {

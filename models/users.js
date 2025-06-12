@@ -32,6 +32,14 @@ const userSchema = new mongoose.Schema({
   // Optional per userType
   brand: String,
   followers: Number,
+  status: {
+    type: String,
+    default: 'Pending'
+  },
+  isBan: {
+    type: Boolean,
+    default: false
+  },
 
   // Flexible Profile
   profile: {
