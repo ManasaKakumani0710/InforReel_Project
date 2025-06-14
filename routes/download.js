@@ -1,7 +1,8 @@
+// routes/fileRoutes.js
 const express = require('express');
 const router = express.Router();
-const { downloadFromS3 } = require('../controllers/downloadController');
+const { downloadFile } = require('../controllers/downloadController');
 
-router.get('/download', downloadFromS3);
+router.get('/download/:id', downloadFile);
 
 module.exports = router;

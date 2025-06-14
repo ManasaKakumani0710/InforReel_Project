@@ -6,7 +6,7 @@ const { addProduct,getUserProducts,addToCart,deleteFromCart,
     paymentHandler,saveAddressHandler,shippingHandler,completeOrderHandler,getCartItems
  } = require('../controllers/productController');
 
-router.post('/add', auth, upload.array('media', 4), addProduct); 
+router.post('/add', auth, upload, addProduct);
 router.get('/my-products', auth, getUserProducts);
 router.post('/addToCart',auth,addToCart);
 router.post('/deleteFromCart',auth,deleteFromCart);

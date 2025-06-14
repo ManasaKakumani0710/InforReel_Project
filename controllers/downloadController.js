@@ -1,55 +1,44 @@
+
 const AWS = require('aws-sdk');
-const path = require('path');
+const VendorDocument = require('../models/vendorDocument');
+
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
+  region: process.env.AWS_REGION
 });
 
-const downloadFromS3 = async (req, res) => {
-  const { key } = req.query;
-
-  if (!key) {
-    return res.status(400).json({
-      code: 400,
-      message: 'File key is required',
-      data: null,
-    });
-  }
-
-  const params = {
-    Bucket: process.env.BUCKET_NAME,
-    Key: key,
-  };
-
+const downloadFile = async (req, res) => {
   try {
-    const s3Stream = s3.getObject(params).createReadStream();
+    const { id } = req.params;
 
-    const fileName = path.basename(key);
-    res.status(200); 
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-
-    s3Stream.on('error', (err) => {
-      console.error('S3 stream error:', err);
-      return res.status(500).json({
-        code: 500,
-        message: 'Failed to download file',
-        data: null,
+    const doc = await VendorDocument.findById(id);
+    if (!doc) {
+      return res.status(404).json({
+        code: 404,
+        message: "File not found",
+        data: null
       });
-    });
+    }
 
-    s3Stream.pipe(res);
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: doc.s3Key
+    };
 
+    res.attachment(doc.fileName);
+    const stream = s3.getObject(params).createReadStream();
+    stream.pipe(res);
   } catch (error) {
-    console.error('Download error:', error);
-    return res.status(500).json({
+    console.error("Download Error:", error);
+    res.status(500).json({
       code: 500,
-      message: 'Error downloading file',
-      data: null,
+      message: "Failed to download file",
+      error: error.message,
+      data: null
     });
   }
 };
 
-module.exports = { downloadFromS3 };
+module.exports = { downloadFile };

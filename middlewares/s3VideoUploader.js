@@ -1,22 +1,26 @@
-// middleware/s3VideoUploader.js
 const multer = require('multer');
 const multerS3 = require('multer-s3');
-const s3 = require('../config/s3config');
+const { S3Client } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 
-
-const uploadVideo = multer({
-  storage: multerS3({
-    s3,
-    bucket: process.env.AWS_BUCKET_NAME,
-    acl: 'public-read',
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    key: (req, file, cb) => {
-      const filename = `${uuidv4()}_${file.originalname}`;
-      cb(null, `posts/${filename}`);
-    }
-  }),
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
-module.exports = uploadVideo;
+const storage = multerS3({
+  s3,
+  bucket: process.env.AWS_BUCKET_NAME,
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: (req, file, cb) => {
+    const sanitizedName = file.originalname.replace(/\s+/g, '_');
+    const filename = `post-videos/${uuidv4()}_${sanitizedName}`;
+    cb(null, filename);
+  }
+});
+
+const upload = multer({ storage });
+module.exports = upload.array('media', 10); 

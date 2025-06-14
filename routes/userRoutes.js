@@ -18,12 +18,7 @@ router.post('/login', loginUser);
 router.post('/verify-otp', verifyOtp);
 router.post('/request-password-reset', requestPasswordReset);
 router.post('/reset-password', resetPassword);
-router.post(
-  '/profile',
-  authMiddleware,
-  upload.array('files'), 
-  updateProfile
-);
+router.post('/profile', authMiddleware, upload, updateProfile);
 
 router.post('/resend-otp', resendOtp);
 

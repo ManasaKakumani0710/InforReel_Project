@@ -34,7 +34,8 @@ app.use("/api/interests", interestsRoutes);
 app.use("/api/posts", postRoutes);
 app.use('/api/products', productRoutes);
 
-app.use('/api', downloadRoutes);
+app.use('/api/files', downloadRoutes);
+
 // Password Reset Route
 app.get("/reset-password", (req, res) => {
   const { token } = req.query;

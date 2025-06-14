@@ -5,7 +5,7 @@ const upload = require('../middlewares/s3VideoUploader');
 const postController = require('../controllers/postController');
 const commentController = require('../controllers/commentController');
 
-router.post('/create', auth, upload.single('video'), postController.createPost);
+router.post('/create', auth, upload, postController.createPost);
 router.get('/allPosts',auth, postController.getAllPosts);
 router.get('/like/:id', auth, postController.toggleLike);
 router.get('/save/:id', auth, postController.toggleSave);

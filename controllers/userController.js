@@ -363,7 +363,6 @@ const updateProfile = async (req, res) => {
     try {
       profileData = JSON.parse(req.body.profile);
     } catch (error) {
-      console.error("Invalid profile JSON:", error);
       return res.status(400).json({
         code: 400,
         message: "Failed",
@@ -409,7 +408,6 @@ const updateProfile = async (req, res) => {
           dob: profileData.dob || "",
           gender: profileData.gender || "",
           ssn: profileData.ssn || "",
-
           address: {
             addressLine1: profileData.address?.addressLine1 || "",
             addressLine2: profileData.address?.addressLine2 || "",
@@ -418,26 +416,17 @@ const updateProfile = async (req, res) => {
             country: profileData.address?.country || "",
             zipCode: profileData.address?.zipCode || "",
           },
-
-          // Identity Verification
           identification: {
             status: profileData.identification?.status || "Pending",
             stripeSessionId: profileData.identification?.stripeSessionId || "",
           },
-
-          // Business Info
           categories: profileData.categories || [],
           businessName: profileData.businessName || "",
           hasDba: profileData.hasDba || false,
           dbaTradeName: profileData.dbaTradeName || "",
-
-          businessContact: profileData.businessContact || {
-            email: "",
-            phone: "",
-          },
-
+          businessContact: profileData.businessContact || { email: "", phone: "" },
           businessAddress: {
-            sameAsResidential: false,
+            sameAsResidential: profileData.businessAddress?.sameAsResidential || false,
             addressLine1: profileData.businessAddress?.addressLine1 || "",
             addressLine2: profileData.businessAddress?.addressLine2 || "",
             city: profileData.businessAddress?.city || "",
@@ -445,7 +434,6 @@ const updateProfile = async (req, res) => {
             country: profileData.businessAddress?.country || "",
             zipCode: profileData.businessAddress?.zipCode || "",
           },
-
           businessWebsite: profileData.businessWebsite || "",
           businessType: profileData.businessType || "",
           isRegisteredBusiness: profileData.isRegisteredBusiness || false,
@@ -453,8 +441,6 @@ const updateProfile = async (req, res) => {
           isManufacturer: profileData.isManufacturer || false,
           brandCountry: profileData.brandCountry || "",
           brandLaunchYear: profileData.brandLaunchYear || "",
-
-          // Social Media
           socialLinks: profileData.socialLinks || {
             Instagram: "",
             Facebook: "",
@@ -462,20 +448,16 @@ const updateProfile = async (req, res) => {
             YouTube: "",
             Other: "",
           },
-
-          // Product Info
           isAllowedEveryWhere: profileData.isAllowedEveryWhere || false,
           productCountries: profileData.productCountries || [],
           brandPromotionalPlan: profileData.brandPromotionalPlan || "",
           productDescription: profileData.productDescription || "",
           productUSP: profileData.productUSP || "",
-
-          // Internal Tracking
           documentStatus: profileData.documentStatus || "Pending",
           createdAt: new Date().toISOString(),
         };
 
-        if (req.files && req.files.length > 0) {
+        if (req.files && (req.files.doc || req.files.image)) {
           let fileMeta = [];
           try {
             fileMeta = req.body.fileMeta ? JSON.parse(req.body.fileMeta) : [];
@@ -488,13 +470,16 @@ const updateProfile = async (req, res) => {
             });
           }
 
-          const docs = req.files.map((file) => {
-            const meta =
-              fileMeta.find((m) => m.fileName === file.originalname) || {};
+          const allFiles = [...(req.files.doc || []), ...(req.files.image || [])];
+          console.log("metadata::",fileMeta);
+
+          const docs = allFiles.map((file) => {
+            const meta = fileMeta.find((m) => m.fileName === file.originalname) || {};
             return {
               userId,
               fileName: file.originalname,
-              filePath: file.location,            
+              filePath: file.location,       // public URL
+              s3Key: file.key,               // <-- this is the actual key used in S3
               mimeType: file.mimetype,
               fileType: meta.fileType || "Other",
               fileCategory: meta.category || "Other",
@@ -503,20 +488,16 @@ const updateProfile = async (req, res) => {
 
           await vendorDocument.insertMany(docs);
 
-          const attachments = req.files.map((file) => ({
-            filename: file.originalname,
-            path: file.location,                   
-          }));
 
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: process.env.COMPANY_VERIFICATION_EMAIL,
-            subject: "Vendor Profile Updated - Verification Required",
-            text: `Vendor ${user.name} (${user.email}) has updated their profile. Please review their documents.`,
-            attachments
-          });
+
+          // await transporter.sendMail({
+          //   from: process.env.EMAIL_USER,
+          //   to: process.env.COMPANY_VERIFICATION_EMAIL,
+          //   subject: "Vendor Profile Updated - Verification Required",
+          //   text: `Vendor ${user.name} (${user.email}) has updated their profile. Please review their documents.`,
+          //   attachments
+          // });
         }
-
         break;
 
       default:
@@ -557,6 +538,7 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 const resendOtp = async (req, res) => {
   try {

@@ -1,26 +1,26 @@
 require('dotenv').config();
 const Product = require('../models/Product');
-const Media = require('../models/productMedia');
+const vendorDocument = require('../models/vendorDocument');
 const Cart = require('../models/Cart');
 const Order = require("../models/Order");
 const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { Shippo } = require('shippo');
-const shippo = new Shippo({apiKeyHeader: process.env.SHIPPO_API_KEY});
+const shippo = new Shippo({ apiKeyHeader: process.env.SHIPPO_API_KEY });
 
 
 const addProduct = async (req, res) => {
   try {
-    const { basicInfo, inventory, pricing, shipping } = req.body;
+    const { basicInfo, inventory, pricing, shipping, fileMeta } = req.body;
 
     const parsedBasicInfo = JSON.parse(basicInfo);
     const parsedInventory = JSON.parse(inventory);
     const parsedPricing = JSON.parse(pricing);
     const parsedShipping = JSON.parse(shipping);
+    const parsedFileMeta = fileMeta ? JSON.parse(fileMeta) : [];
 
     const newProduct = new Product({
       user: req.user._id,
-
       productName: parsedBasicInfo.productName,
       productDescription: parsedBasicInfo.productDescription,
       category: parsedBasicInfo.category,
@@ -47,37 +47,45 @@ const addProduct = async (req, res) => {
       }
     });
 
-    const savedProduct = await newProduct.save();
+    const savedProduct = await newProduct.save(); 
 
-    const mediaEntries = await Promise.all(
-      req.files?.map(async (file) => {
-        const isVideo = file.mimetype.startsWith('video');
-        const mediaDoc = new Media({
-          fileUrl: file.location,  
-          type: isVideo ? 'video' : 'image',
-          product: savedProduct._id,
-          uploadedBy: req.user._id
-        });
-        return await mediaDoc.save();
-      }) || []
-    );
+    const allFiles = [
+      ...(req.files?.image || []),
+      ...(req.files?.video || [])
+    ];
 
-    savedProduct.media = mediaEntries.map((m) => m._id);
+    const docEntries = allFiles.map((file) => {
+      const meta = parsedFileMeta.find((m) => m.fileName === file.originalname) || {};
+      return {
+        userId: req.user._id,
+        fileName: file.originalname,
+        filePath: file.location,
+        s3Key: file.key,
+        mimeType: file.mimetype,
+        fileType: meta.fileType || "Other",
+        fileCategory: meta.category || "Other",
+        productId: savedProduct._id
+      };
+    });
+
+    const insertedDocs = await vendorDocument.insertMany(docEntries);
+
+    // ✅ Add media reference to product
+    savedProduct.media = insertedDocs.map(doc => doc._id);
     await savedProduct.save();
 
     const populated = await Product.findById(savedProduct._id)
-      .populate({ path: 'user', select: '_id email username' })
-      .populate({ path: 'media' });
+      .populate({ path: 'user', select: '_id email username' });
 
-    res.status(200).json({
+    return res.status(200).json({
       code: 200,
       message: 'Product created with media successfully',
       data: populated
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
+    console.error('Add Product Error:', err);
+    return res.status(500).json({
       code: 500,
       message: 'Server error',
       error: err.message
@@ -134,10 +142,10 @@ const addToCart = async (req, res) => {
       });
     }
 
-    
+
     let cart = await Cart.findOne({ userId });
 
-    
+
     if (!cart) {
       cart = new Cart({
         userId,
@@ -145,17 +153,17 @@ const addToCart = async (req, res) => {
       });
       await cart.save();
     } else {
-      
+
       const itemIndex = cart.items.findIndex(
         item => item.productId.toString() === productId
       );
 
       if (itemIndex > -1) {
-        
+
         cart.items[itemIndex].productDetails.quantity += incomingQty;
         cart.items[itemIndex].productDetails.price += incomingPrice; // override or recalculate if needed
       } else {
-        
+
         cart.items.push({
           productId,
           productDetails: { ...productDetails, quantity: incomingQty, price: incomingPrice }
@@ -231,7 +239,7 @@ const deleteFromCart = async (req, res) => {
 
 const saveAddressHandler = async (req, res) => {
   try {
-    const userId = req.user.id; 
+    const userId = req.user.id;
     const address = req.body;
 
     if (!address || Object.keys(address).length === 0) {
@@ -298,10 +306,10 @@ const completeOrderHandler = async (req, res) => {
 
 const shippingHandler = async (req, res) => {
   try {
-    const { addressTo , parcel } = req.body;
+    const { addressTo, parcel } = req.body;
 
     // Ensure parcel fields are in string format
-    const formattedParcel  = {
+    const formattedParcel = {
       length: String(parcel.length),
       width: String(parcel.width),
       height: String(parcel.height),
@@ -310,7 +318,7 @@ const shippingHandler = async (req, res) => {
       massUnit: parcel.massUnit || "lb"
     };
 
-    const addressFrom  = {
+    const addressFrom = {
       name: process.env.FROM_NAME,
       street1: process.env.FROM_STREET1,
       city: process.env.FROM_CITY,
@@ -320,11 +328,11 @@ const shippingHandler = async (req, res) => {
       phone: process.env.FROM_PHONE,
       email: process.env.FROM_EMAIL
     };
-    console.log("Secret Key::"+ process.env.SHIPPO_API_KEY);
+    console.log("Secret Key::" + process.env.SHIPPO_API_KEY);
 
     const shipment = await shippo.shipments.create({
-      addressFrom ,
-      addressTo ,
+      addressFrom,
+      addressTo,
       parcels: [formattedParcel],
       async: false
     });
@@ -364,9 +372,9 @@ const paymentHandler = async (req, res) => {
       payment_method: paymentMethodId,
       confirm: true,
       automatic_payment_methods: {
-    enabled: true,
-    allow_redirects: "never"
-  }
+        enabled: true,
+        allow_redirects: "never"
+      }
     });
     res.status(200).json({ code: 200, message: "Payment successful", data: paymentIntent });
   } catch (error) {
@@ -403,7 +411,8 @@ const getCartItems = async (req, res) => {
 };
 
 
-module.exports = { addProduct,getUserProducts,addToCart,deleteFromCart,
-  paymentHandler,saveAddressHandler,shippingHandler,completeOrderHandler,
+module.exports = {
+  addProduct, getUserProducts, addToCart, deleteFromCart,
+  paymentHandler, saveAddressHandler, shippingHandler, completeOrderHandler,
   getCartItems
-  };
+};

@@ -1,23 +1,23 @@
 const Post = require('../models/Post');
 const User = require('../models/users');
 const ReportedCompany = require('../models/ReportedCompany');
+const VendorDocument = require('../models/vendorDocument');
 
 const createPost = async (req, res) => {
   try {
-    const video = req.file ? req.file.location : null; 
-    const { title, description, tags } = req.body;
+    const { title, description, tags, fileMeta } = req.body;
+    const parsedFileMeta = fileMeta ? JSON.parse(fileMeta) : [];
 
-    if (!title || !video) {
+    if (!title || !req.files || req.files.length === 0) {
       return res.status(400).json({
         code: 400,
         message: "Failed",
-        error: "Title and video are required.",
+        error: "Title and media files are required.",
         data: null
       });
     }
 
     const user = await User.findById(req.user._id).select("name email");
-
     if (!user) {
       return res.status(404).json({
         code: 404,
@@ -27,34 +27,49 @@ const createPost = async (req, res) => {
       });
     }
 
+    const taggedUserDetails = [];
     let taggedUsers = [];
-    let taggedUserDetails = [];
 
     if (tags) {
       const companyNames = JSON.parse(tags);
-
       const users = await User.find({
         "profile.businessName": { $in: companyNames }
       }).select("_id name email profile.businessName");
 
       taggedUsers = users.map(u => u._id);
-      taggedUserDetails = users.map(u => ({
+      taggedUserDetails.push(...users.map(u => ({
         userId: u._id,
         username: u.name,
         email: u.email,
         companyName: u.profile.businessName
-      }));
+      })));
     }
+
+    const docEntries = req.files.map(file => {
+      const meta = parsedFileMeta.find(m => m.fileName === file.originalname) || {};
+      return {
+        userId: req.user._id,
+        fileName: file.originalname,
+        filePath: file.location,
+        s3Key: file.key,
+        mimeType: file.mimetype,
+        fileType: file.mimetype.startsWith('video') ? 'video' : 'image',
+        fileCategory: meta.category || 'Post',
+      };
+    });
+
+    const uploadedDocs = await VendorDocument.insertMany(docEntries);
+    const mediaIds = uploadedDocs.map(doc => doc._id);
 
     const post = await Post.create({
       user: req.user._id,
       title,
       description,
       tags: taggedUsers,
-      video 
+      video: mediaIds
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       code: 200,
       message: "Post created successfully",
       error: null,
@@ -68,13 +83,14 @@ const createPost = async (req, res) => {
         title: post.title,
         description: post.description,
         tags: taggedUserDetails,
-        video: post.video,
+        media: uploadedDocs,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt
       }
     });
   } catch (err) {
-    res.status(500).json({
+    console.error("Create Post Error:", err);
+    return res.status(500).json({
       code: 500,
       message: "Failed",
       error: err.message,
@@ -82,8 +98,6 @@ const createPost = async (req, res) => {
     });
   }
 };
-
-
 
 const getAllPosts = async (req, res) => {
   try {

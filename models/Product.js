@@ -10,7 +10,7 @@ const productSchema = new mongoose.Schema({
   productTags: [{ type: String }],
 
   // Media
-  media: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+  media: [{ type: mongoose.Schema.Types.ObjectId, ref: 'VendorDocument' }],
 
   // Inventory
   sku: { type: String },

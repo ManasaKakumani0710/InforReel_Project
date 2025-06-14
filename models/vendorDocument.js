@@ -7,9 +7,13 @@ const vendorDocumentSchema = new mongoose.Schema({
     required: true
   },
   fileName: String,
-  filePath: String,
+  filePath: String,  
+  s3Key: String,   
   mimeType: String,
-  fileType: String, 
+  fileType: String,
+  fileCategory: String,
+  productId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  postId: { type: mongoose.Schema.Types.ObjectId, ref: 'Post' },
   uploadedAt: { type: Date, default: Date.now }
 });
 
