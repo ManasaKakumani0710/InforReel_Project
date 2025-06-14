@@ -11,19 +11,13 @@ const shippo = new Shippo({apiKeyHeader: process.env.SHIPPO_API_KEY});
 
 const addProduct = async (req, res) => {
   try {
-    const {
-      basicInfo,
-      inventory,
-      pricing,
-      shipping
-    } = req.body;
+    const { basicInfo, inventory, pricing, shipping } = req.body;
 
     const parsedBasicInfo = JSON.parse(basicInfo);
     const parsedInventory = JSON.parse(inventory);
     const parsedPricing = JSON.parse(pricing);
     const parsedShipping = JSON.parse(shipping);
 
-    
     const newProduct = new Product({
       user: req.user._id,
 
@@ -55,12 +49,11 @@ const addProduct = async (req, res) => {
 
     const savedProduct = await newProduct.save();
 
-   
     const mediaEntries = await Promise.all(
-      req.files?.map(async file => {
+      req.files?.map(async (file) => {
         const isVideo = file.mimetype.startsWith('video');
         const mediaDoc = new Media({
-          fileUrl: file.path,
+          fileUrl: file.location,  
           type: isVideo ? 'video' : 'image',
           product: savedProduct._id,
           uploadedBy: req.user._id
@@ -69,11 +62,9 @@ const addProduct = async (req, res) => {
       }) || []
     );
 
-    
-    savedProduct.media = mediaEntries.map(m => m._id);
+    savedProduct.media = mediaEntries.map((m) => m._id);
     await savedProduct.save();
 
-    
     const populated = await Product.findById(savedProduct._id)
       .populate({ path: 'user', select: '_id email username' })
       .populate({ path: 'media' });
@@ -93,6 +84,7 @@ const addProduct = async (req, res) => {
     });
   }
 };
+
 
 const getUserProducts = async (req, res) => {
   try {

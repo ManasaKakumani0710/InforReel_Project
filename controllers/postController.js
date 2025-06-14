@@ -4,7 +4,7 @@ const ReportedCompany = require('../models/ReportedCompany');
 
 const createPost = async (req, res) => {
   try {
-    const video = req.file ? req.file.path : null;
+    const video = req.file ? req.file.location : null; 
     const { title, description, tags } = req.body;
 
     if (!title || !video) {
@@ -51,7 +51,7 @@ const createPost = async (req, res) => {
       title,
       description,
       tags: taggedUsers,
-      video
+      video 
     });
 
     res.status(200).json({
@@ -82,8 +82,6 @@ const createPost = async (req, res) => {
     });
   }
 };
-
-
 
 
 

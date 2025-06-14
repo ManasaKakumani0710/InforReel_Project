@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/authMiddleware');
-const upload = require('../utils/uploadProducts');
+const upload = require('../middlewares/s3ProductUploader');
 const { addProduct,getUserProducts,addToCart,deleteFromCart,
     paymentHandler,saveAddressHandler,shippingHandler,completeOrderHandler,getCartItems
  } = require('../controllers/productController');

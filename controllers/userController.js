@@ -494,7 +494,7 @@ const updateProfile = async (req, res) => {
             return {
               userId,
               fileName: file.originalname,
-              filePath: file.path,
+              filePath: file.location,            
               mimeType: file.mimetype,
               fileType: meta.fileType || "Other",
               fileCategory: meta.category || "Other",
@@ -505,7 +505,7 @@ const updateProfile = async (req, res) => {
 
           const attachments = req.files.map((file) => ({
             filename: file.originalname,
-            path: file.path,
+            path: file.location,                   
           }));
 
           await transporter.sendMail({
@@ -513,9 +513,10 @@ const updateProfile = async (req, res) => {
             to: process.env.COMPANY_VERIFICATION_EMAIL,
             subject: "Vendor Profile Updated - Verification Required",
             text: `Vendor ${user.name} (${user.email}) has updated their profile. Please review their documents.`,
-            attachments,
+            attachments
           });
         }
+
         break;
 
       default:

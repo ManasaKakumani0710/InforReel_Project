@@ -12,6 +12,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const interestsRoutes = require("./routes/interestsRoutes");
 const postRoutes = require("./routes/postRoutes");
 const productRoutes = require('./routes/productRoutes');
+const downloadRoutes = require('./routes/download');
 
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use("/api/interests", interestsRoutes);
 app.use("/api/posts", postRoutes);
 app.use('/api/products', productRoutes);
 
+app.use('/api', downloadRoutes);
 // Password Reset Route
 app.get("/reset-password", (req, res) => {
   const { token } = req.query;

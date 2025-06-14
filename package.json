@@ -11,6 +11,7 @@
   "author": "Manasa",
   "license": "MIT",
   "dependencies": {
+    "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -20,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.1",
     "multer": "^1.4.5-lts.2",
+    "multer-s3": "^3.0.1",
     "nodemailer": "^6.10.1",
     "shippo": "^2.15.0",
     "stripe": "^18.1.0"

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/authMiddleware');
-const upload = require('../utils/uploadPosts');
+const upload = require('../middlewares/s3VideoUploader');
 const postController = require('../controllers/postController');
 const commentController = require('../controllers/commentController');
 
